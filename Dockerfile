@@ -1,5 +1,10 @@
 FROM python:3.11-slim
 
+
+# RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 40976EAF437D05B5
+
+ADD sources.list /etc/apt/
+
 # 设置工作目录
 WORKDIR /app
 

@@ -67,12 +67,13 @@
         "requirements": [],
         "review_comment": ""
       },
+      
       {
-        "name": "ChatSummary",
+        "name": "ChatSummary V2",
         "description": "聊天记录总结插件\r\n功能\r\n聊天记录总结： 自动分析聊天记录，生成总结报告 🧾。\r\n话题提取： 提取聊天记录中的主要话题 🗣️。\r\n参与者识别： 识别参与话题讨论的用户 👤。\r\n时间段分析： 分析话题讨论的时间段 ⏱️。\r\n过程描述： 简要描述话题讨论的过程 ✍️。\r\n情感评价： 对话题讨论进行情感评价 🤔。\r\nDify 集成： 通过 Dify 大模型进行总结，提供更智能的分析结果 ✨。\r\n灵活的总结方式：\r\n默认条数总结： 只输入 $总结 或 总结 时，默认总结最近 100 条消息 💬。\r\n指定条数总结： 输入 $总结 200 或 总结 200 时，总结最近 200 条消息 🔢。\r\n指定时间段总结： 输入 $总结 1小时 或 总结 1小时 时，总结最近 1 小时的消息 🕐。\r\n数据库存储： 将聊天记录存储到 SQLite 数据库中，方便后续分析和查询 💾。\r\n定期清理： 定期清理数据库中的旧消息，保持数据库的精简 🧹。\r\n独立表格： 为每个聊天（个人或群组）创建独立的表格，保证数据隔离和查询效率 🗂️。\r\n\"$总结\", \"总结\"]  # 触发总结的命令",
         "author": "老夏的金库",
         "version": "1.1.0",
-        "github_url": "https://github.com/NanSsye/ChatSummary",
+        "github_url": "https://github.com/jake0719/ChatSummary",
         "icon": null,
         "id": "7bbda80d-45e6-4022-8d2f-794de1ff170f",
         "status": "approved",

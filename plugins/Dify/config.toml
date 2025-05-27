@@ -49,8 +49,8 @@ robot-names = [                 # 用于识别AI名称，在传递到Dify时进�
 
 # 学姐模型配置
 [Dify.models."学姐"]
-api-key = "app-zPoThZ1qVxei3DRVS7k4ZLqN"  # API密钥
-base-url = "http://192.168.6.19:8080/v1"   # API基础URL
+api-key = "app-0JkTBEEQN4wbECiRv27Megw6"  # API密钥
+base-url = "http://14.103.148.132/v1"   # API基础URL
 trigger-words = ["@学姐"]                  # 用于切换模型的触发词
 wakeup-words = ["学姐"]                    # 用于唤醒AI的唤醒词
 price = 0                                  # 使用价格（积分）

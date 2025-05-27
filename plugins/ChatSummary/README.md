@@ -1,4 +1,4 @@
-# ChatSummary - XYBotv2 聊天记录总结插件 📝
+# ChatSummary - 聊天记录定时总结插件 📝
 
 [![Version](https://img.shields.io/github/v/release/your_username/ChatSummary)](https://github.com/your_username/ChatSummary/releases)
 [![Author](https://img.shields.io/badge/Author-%E8%80%81%E5%A4%8F%E7%9A%84%E9%87%91%E5%BA%93-blue)](https://github.com/your_username)

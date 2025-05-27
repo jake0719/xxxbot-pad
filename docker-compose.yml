@@ -1,9 +1,9 @@
 services:
   xxxbot:
-    image: nanssye/xxxbot-pad:latest
+    image: xxxbot:latest
     container_name: xxxbot-pad
     restart: unless-stopped
-    pull_policy: always # 确保每次都检查并拉取最新的镜像
+    # pull_policy: always # 确保每次都检查并拉取最新的镜像
     ports:
       - "9090:9090" # 管理后台端口
     volumes:
