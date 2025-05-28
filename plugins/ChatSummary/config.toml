@@ -1,7 +1,7 @@
 [DailyGroupSummary.Dify]
 enable = true              # 是否启用 Dify 集成
-api-key = "app-D76cJ0dEyh1pcrEbKvq0zbsz"   # 你的 Dify API 密钥
-base-url = "http://192.168.6.19:8080/v1"  # 你的 Dify API Base URL
+api-key = "app-0JkTBEEQN4wbECiRv27Megw6"   # 你的 Dify API 密钥
+base-url = "http://14.103.148.132/v1"  # 你的 Dify API Base URL
 http-proxy = ""               # HTTP 代理服务器地址 (可选)，如 "http://127.0.0.1:7890" or leave blank
 
 [DailyGroupSummary]
