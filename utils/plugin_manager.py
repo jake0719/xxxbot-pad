@@ -110,6 +110,8 @@ class PluginManager:
             if is_disabled:
                 return False
 
+            logger.info(f"==============================正在加载插件: {plugin_name}")
+
             plugin = plugin_class()
             EventManager.bind_instance(plugin)
             await plugin.on_enable(bot)
@@ -204,6 +206,8 @@ class PluginManager:
                 if os.path.isdir(f"plugins/{dirname}") and os.path.exists(f"plugins/{dirname}/main.py"):
                     module = importlib.import_module(f"plugins.{dirname}.main")
                     importlib.reload(module)
+                    
+                    logger.info(f"=====================正在加载插件: {plugin_name} 在目录 {dirname}")
 
                     for name, obj in inspect.getmembers(module):
                         if (inspect.isclass(obj) and

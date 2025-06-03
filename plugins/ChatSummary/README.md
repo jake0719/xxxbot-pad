@@ -50,7 +50,7 @@ http-proxy = ""               # HTTP 代理服务器地址 (可选)，如 "http:
 
 [ChatSummary]
 enable = true
-commands = ["$总结", "总结"]  # 触发总结的命令
+commands = ["$总结", "群总结"]  # 触发总结的命令
 default_num_messages = 100 # 默认总结 100 条消息
 summary_wait_time = 60      # 总结等待时间（秒）
 ```

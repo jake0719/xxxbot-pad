@@ -15,16 +15,16 @@ import os
 from WechatAPI import WechatAPIClient
 from utils.decorators import on_at_message, on_text_message
 from utils.plugin_base import PluginBase
-
-class DailyGroupSummary(PluginBase):
+ChatSummary
+class ChatSummary(PluginBase):
     """
     一个用于每日定时总结各个微信群消息的插件，可以直接调用Dify大模型进行总结，
     并将总结结果存入 MySQL 数据库。
     """
 
     description = "每日定时总结微信群消息"
-    author = "AI编程猫"
-    version = "1.0.0"
+    author = "AI 助手 80"
+    version = "1.0.1"
 
     # 总结的prompt
     SUMMARY_PROMPT = """
@@ -66,10 +66,10 @@ class DailyGroupSummary(PluginBase):
         super().__init__()
         self.db_connection = None
         try:
-            with open("plugins/DailyGroupSummary/config.toml", "rb") as f:
+            with open("plugins/ChatSummary/config.toml", "rb") as f:
                 config = tomllib.load(f)
 
-            plugin_config = config["DailyGroupSummary"]
+            plugin_config = config["ChatSummary"]
             self.enable = plugin_config["enable"]
             self.summary_time = time.fromisoformat(plugin_config["summary_time"])
             self.default_num_messages = plugin_config["default_num_messages"]
@@ -94,12 +94,12 @@ class DailyGroupSummary(PluginBase):
 
             self.initialize_database()
 
-            logger.info("DailyGroupSummary 插件配置加载成功")
+            logger.info("ChatSummary 插件配置加载成功")
         except FileNotFoundError:
             logger.error("config.toml 配置文件未找到，插件已禁用。")
             self.enable = False
         except Exception as e:
-            logger.exception(f"DailyGroupSummary 插件初始化失败: {e}")
+            logger.exception(f"ChatSummary 插件初始化失败: {e}")
             self.enable = False
 
         self.http_session = aiohttp.ClientSession()
@@ -311,7 +311,7 @@ class DailyGroupSummary(PluginBase):
 
     async def close(self):
         """插件关闭时，关闭相关资源"""
-        logger.info("Closing DailyGroupSummary plugin")
+        logger.info("Closing ChatSummary plugin")
         if self.http_session:
             await self.http_session.close()
             logger.info("Aiohttp session closed")
@@ -321,7 +321,7 @@ class DailyGroupSummary(PluginBase):
             self.db_connection.close()
             logger.info("MySQL 数据库连接已关闭")
 
-        logger.info("DailyGroupSummary plugin closed")
+        logger.info("ChatSummary plugin closed")
 
     async def start(self, bot: WechatAPIClient):
         """启动插件时启动定时总结任务"""
