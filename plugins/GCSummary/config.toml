@@ -15,4 +15,4 @@ host = "x16.com"
 port = 3306
 user = "res_dev"
 password = "res_7777"
-database = "mmall"
+database = "ai_test"
