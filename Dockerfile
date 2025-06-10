@@ -46,6 +46,7 @@ COPY requirements.txt .
 
 # 升级pip并安装Python依赖
 RUN pip install --upgrade pip && \
+    pip install mysql-connector-python && \
     pip install --no-cache-dir -r requirements.txt && \
     pip install --no-cache-dir websockets httpx
 

@@ -1,8 +1,8 @@
-# GroupChatSummary - 聊天记录定时总结插件 📝
+# GCSummary - 聊天记录总结插件 📝
 
-[![Version](https://img.shields.io/github/v/release/your_username/GroupChatSummary)](https://github.com/your_username/GroupChatSummary/releases)
+[![Version](https://img.shields.io/github/v/release/your_username/GCSummary)](https://github.com/your_username/GCSummary/releases)
 [![Author](https://img.shields.io/badge/Author-%E8%80%81%E5%A4%8F%E7%9A%84%E9%87%91%E5%BA%93-blue)](https://github.com/your_username)
-[![License](https://img.shields.io/github/license/your_username/GroupChatSummary)](LICENSE)
+[![License](https://img.shields.io/github/license/your_username/GCSummary)](LICENSE)
 
 **本插件是 [XYBotv2](https://github.com/HenryXiaoYang/XYBotv2) 的一个插件。**
 
@@ -10,7 +10,7 @@
 
 ## 简介
 
-`GroupChatSummary` 是一款强大的聊天记录总结插件！ 它可以自动分析聊天记录，并生成包含话题、参与者、时间段、过程和评价的总结报告 📊。 插件支持通过 Dify 大模型进行总结，提供更智能、更全面的分析结果 🧠。
+`GCSummary` 是一款强大的聊天记录总结插件！ 它可以自动分析聊天记录，并生成包含话题、参与者、时间段、过程和评价的总结报告 📊。 插件支持通过 Dify 大模型进行总结，提供更智能、更全面的分析结果 🧠。
 
 ## 功能
 
@@ -42,15 +42,15 @@
 插件的配置位于 `config.toml` 文件中 📝。以下是配置示例：
 
 ```toml
-[GroupChatSummary.Dify]
+[GCSummary.Dify]
 enable = true              # 是否启用 Dify 集成
 api-key = "你的 Dify API 密钥"   # 你的 Dify API 密钥
 base-url = "你的 Dify API Base URL"  # 你的 Dify API Base URL
 http-proxy = ""               # HTTP 代理服务器地址 (可选)，如 "http://127.0.0.1:7890"
 
-[GroupChatSummary]
+[GCSummary]
 enable = true
-commands = ["$总结", "群总结"]  # 触发总结的命令
+commands = ["$总结", "总结"]  # 触发总结的命令
 default_num_messages = 100 # 默认总结 100 条消息
 summary_wait_time = 60      # 总结等待时间（秒）
 ```

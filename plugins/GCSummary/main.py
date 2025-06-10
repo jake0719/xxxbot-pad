@@ -10,12 +10,14 @@ from loguru import logger
 import aiohttp
 import sqlite3  # 导入 sqlite3 模块
 import os
+import mysql.connector
+from mysql.connector import Error
 
 from WechatAPI import WechatAPIClient
 from utils.decorators import on_at_message, on_text_message
 from utils.plugin_base import PluginBase
 
-class ChatSummary(PluginBase):
+class GCSummary(PluginBase):
     """
     一个用于总结个人聊天和群聊天的插件，可以直接调用Dify大模型进行总结。
     """
@@ -77,10 +79,10 @@ class ChatSummary(PluginBase):
     def __init__(self):
         super().__init__()
         try:
-            with open("plugins/ChatSummary/config.toml", "rb") as f:
+            with open("plugins/GCSummary/config.toml", "rb") as f:
                 config = tomllib.load(f)
 
-            plugin_config = config["ChatSummary"]
+            plugin_config = config["GCSummary"]
             self.enable = plugin_config["enable"]
             self.commands = plugin_config["commands"]
             self.default_num_messages = plugin_config["default_num_messages"]
@@ -94,13 +96,22 @@ class ChatSummary(PluginBase):
             if not self.dify_enable or not self.dify_api_key or not self.dify_base_url:
                 logger.warning("Dify配置不完整，请检查config.toml文件")
                 self.enable = False
+            
+            mysql_config = plugin_config["MySQL"]
+            self.db_config = {
+                "host": mysql_config["host"],
+                "port": mysql_config["port"],
+                "user": mysql_config["user"],
+                "password": mysql_config["password"],
+                "database": mysql_config["database"]
+            }
 
-            logger.info("ChatSummary 插件配置加载成功")
+            logger.info("GCSummary 插件配置加载成功")
         except FileNotFoundError:
             logger.error("config.toml 配置文件未找到，插件已禁用。")
             self.enable = False
         except Exception as e:
-            logger.exception(f"ChatSummary 插件初始化失败: {e}")
+            logger.exception(f"GCSummary 插件初始化失败: {e}")
             self.enable = False
 
         self.summary_tasks: Dict[str, asyncio.Task] = {}  # 存储正在进行的总结任务
@@ -114,9 +125,26 @@ class ChatSummary(PluginBase):
         self.initialize_database() #初始化数据库
 
     def initialize_database(self):
-         """初始化数据库连接"""
-         self.db_connection = sqlite3.connect(self.db_file)
-         logger.info("数据库连接已建立")
+        """初始化数据库连接"""
+        self.db_connection = sqlite3.connect(self.db_file)
+        logger.info("sqlite3 数据库连接已建立")
+        try:
+            self.mysql_db_connection = mysql.connector.connect(**self.db_config)
+            cursor = self.mysql_db_connection.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS group_chat_summaries (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    group_id VARCHAR(255) NOT NULL,
+                    summary_date DATE NOT NULL,
+                    summary_text TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            self.mysql_db_connection.commit()
+            logger.info("MySQL 数据库连接已建立，表已创建或存在")
+        except Error as e:
+            logger.error(f"MySQL 数据库连接或表创建失败: {e}")
+            self.enable = False
 
     def create_table_if_not_exists(self, chat_id: str):
         """为每个chat_id创建一个单独的表"""
@@ -135,6 +163,34 @@ class ChatSummary(PluginBase):
             logger.info(f"表 {table_name} 创建成功")
         except sqlite3.Error as e:
              logger.error(f"创建表 {table_name} 失败：{e}")
+
+    def save_summary_to_mysql(self, group_id: str, summary: str):
+        """将群聊总结存入 MySQL 数据库"""
+        try:
+            if self.mysql_db_connection and self.mysql_db_connection.is_connected():
+                cursor = self.mysql_db_connection.cursor()
+                insert_query = """
+                    INSERT INTO group_chat_summaries (group_id, summary_date, summary_text)
+                    VALUES (%s, CURDATE(), %s)
+                """
+                cursor.execute(insert_query, (group_id, summary))
+                self.mysql_db_connection.commit()
+                logger.info(f"群 {group_id} 的总结已存入 MySQL 数据库")
+            else:
+                try:
+                    self.mysql_db_connection = mysql.connector.connect(**self.db_config)
+                    cursor = self.mysql_db_connection.cursor()
+                    insert_query = """
+                        INSERT INTO group_chat_summaries (group_id, summary_date, summary_text)
+                        VALUES (%s, CURDATE(), %s)
+                    """
+                    cursor.execute(insert_query, (group_id, summary))
+                    self.mysql_db_connection.commit()
+                    logger.info(f"群 {group_id} 的总结已存入 MySQL 数据库")
+                except Error as e:
+                    logger.error("MySQL 数据库连接未建立，无法保存总结")
+        except Error as e:
+            logger.error(f"保存总结到 MySQL 数据库失败: {e}")
 
     def get_table_name(self, chat_id: str) -> str:
         """
@@ -206,6 +262,9 @@ class ChatSummary(PluginBase):
 
             self.last_summary_time[chat_id] = datetime.now()  # 更新上次总结时间
             logger.info(f"{chat_id} 的总结完成")
+
+            # 将总结存入 MySQL 数据库
+            self.save_summary_to_mysql(chat_id, summary)
 
         except Exception as e:
             logger.exception(f"总结 {chat_id} 发生错误: {e}")
@@ -460,7 +519,7 @@ class ChatSummary(PluginBase):
 
     async def close(self):
         """插件关闭时，取消所有未完成的总结任务。"""
-        logger.info("Closing ChatSummary plugin")
+        logger.info("Closing GCSummary plugin")
         for chat_id, task in self.summary_tasks.items():
             if not task.done():
                 logger.info(f"Cancelling summary task for {chat_id}")
@@ -480,7 +539,7 @@ class ChatSummary(PluginBase):
             self.db_connection.close()
             logger.info("数据库连接已关闭")
 
-        logger.info("ChatSummary plugin closed")
+        logger.info("GCSummary plugin closed")
 
     async def start(self):
         """启动插件时启动清理旧消息的任务"""
