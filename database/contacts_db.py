@@ -217,6 +217,8 @@ def update_contact_in_db(contact):
 
         extra_data_json = json.dumps(extra_data, ensure_ascii=False)
 
+        logger.info(f"保存联系人 extra_data_json : {extra_data_json}")
+
         # 检查联系人是否存在
         cursor.execute("SELECT wxid FROM contacts WHERE wxid = ?", (wxid,))
         exists = cursor.fetchone()
@@ -245,7 +247,7 @@ def update_contact_in_db(contact):
                 extra_data_json,
                 wxid
             ))
-            logger.debug(f"更新联系人: {wxid}")
+            logger.info(f"更新联系人: {wxid}")
         else:
             # 插入新联系人
             cursor.execute('''
@@ -263,7 +265,7 @@ def update_contact_in_db(contact):
                 current_time,
                 extra_data_json
             ))
-            logger.debug(f"新增联系人: {wxid}")
+            logger.info(f"新增联系人: {wxid}")
 
         conn.commit()
         conn.close()

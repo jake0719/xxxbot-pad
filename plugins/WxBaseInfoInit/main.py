@@ -11,6 +11,7 @@ from mysql.connector import Error
 from WechatAPI import WechatAPIClient
 from utils.decorators import on_text_message
 from utils.plugin_base import PluginBase
+from database.contacts_db_mysql import ensure_mysql_config, Database
 
 class WxBaseInfoInit(PluginBase):
     """
@@ -38,7 +39,7 @@ class WxBaseInfoInit(PluginBase):
                 "database": mysql_config["database"]
             }
             self.enable = plugin_config.get("enable", True)
-            logger.info("WxBaseInfoInit 插件配置加载成功")
+            logger.info("WxBaseInfoInit  =============================  插件配置加载成功")
         except Exception as e:
             logger.exception(f"WxBaseInfoInit 插件初始化失败: {e}")
             self.enable = False
@@ -112,16 +113,39 @@ class WxBaseInfoInit(PluginBase):
             cursor = self.mysql_db_connection.cursor()
             now = datetime.now()
             count = 0
+
+            ensure_mysql_config()
+
             for contact in contacts:
                 wxid = contact.get("UserName") or contact.get("wxid")
                 if not wxid:
                     continue
+
+                dbContact = Database.get_contact_from_mysql(wxid)
+                # logger.info(f"mysql 联系人 {wxid} 信息：{dbContact}")
+
+
+
                 nickname = contact.get("NickName") or contact.get("nickname")
                 remark = contact.get("RemarkName") or contact.get("remark")
                 avatar = contact.get("HeadImgUrl") or contact.get("avatar")
-                alias = contact.get("Alias") or contact.get("alias")
-                contact_type = "group" if wxid.endswith("@chatroom") else ("official" if wxid.startswith("gh_") else "friend")
                 region = contact.get("Province") or contact.get("region")
+                alias = contact.get("Alias") or contact.get("alias")
+
+                if dbContact:
+                    if dbContact.get('nickname') and (nickname == "" or nickname == wxid):
+                        nickname = dbContact.get('nickname')
+                        logger.info(f"mysql 联系人 {wxid} nickname：{nickname}")
+                    if dbContact.get('region') and (region == None or region == "" or region == "未设置" or region == "未知"):
+                        region = dbContact.get('region')
+                    if dbContact.get('alias') and (alias == None or alias == "" or alias == "未设置" or region == "未知"):
+                        alias = dbContact.get('alias')
+                    if dbContact.get('remark') and (remark == None or remark == "" or remark == "未设置" or region == "未知"):
+                        remark = dbContact.get('remark')
+
+
+                contact_type = "group" if wxid.endswith("@chatroom") else ("official" if wxid.startswith("gh_") else "friend")
+                
                 extra_data = {k: v for k, v in contact.items() if k not in ["UserName", "wxid", "NickName", "nickname", "RemarkName", "remark", "HeadImgUrl", "avatar", "Alias", "alias", "Province", "region"]}
                 cursor.execute('''
                     INSERT INTO contacts (wxid, nickname, remark, avatar, alias, type, region, last_updated, extra_data)
@@ -147,11 +171,14 @@ class WxBaseInfoInit(PluginBase):
             logger.info("开始采集微信群及成员信息...")
             # 获取所有联系人，筛选出群聊
             contacts = await self.getContactsList(bot)
+            
             # contacts = data.get("ContactList", [])
             group_list = [c for c in contacts if (c.get("UserName") or c.get("wxid", "")).endswith("@chatroom")]
             if not group_list:
                 await bot.send_text_message(chat_id, "未获取到任何群聊信息！")
                 return
+            
+            ensure_mysql_config()
             
             if self.mysql_db_connection and not self.mysql_db_connection.is_connected():
                 try:
@@ -176,6 +203,10 @@ class WxBaseInfoInit(PluginBase):
 
                 logger.info(f"group_info: {group_info}")
 
+                dbContact = Database.get_contact_from_mysql(group_wxid)
+                # logger.info(f"mysql 联系人 {wxid} 信息：{dbContact}")
+
+
                 nickname = group_info.get('NickName', {}) or group_info.get("nickname", {})
                 if nickname:
                     nickname = nickname.get('string')
@@ -183,6 +214,22 @@ class WxBaseInfoInit(PluginBase):
                     nickname = ""
 
                 avatar = group_info.get("HeadImgUrl") or group_info.get("avatar") or group_info.get("SmallHeadImgUrl")
+
+                remark = ""
+                alias = ""
+                region = ""
+
+                if dbContact:
+                    if dbContact.get('nickname') and (nickname == "" or nickname == group_wxid):
+                        nickname = dbContact.get('nickname')
+                        logger.info(f"mysql 联系人 {group_wxid} nickname：{nickname}")
+                    if dbContact.get('region') and (region == None or region == "" or region == "未设置" or region == "未知"):
+                        region = dbContact.get('region')
+                    if dbContact.get('alias') and (alias == None or alias == "" or alias == "未设置" or region == "未知"):
+                        alias = dbContact.get('alias')
+                    if dbContact.get('remark') and (remark == None or remark == "" or remark == "未设置" or region == "未知"):
+                        remark = dbContact.get('remark')
+
                 # SmallHeadImgUrl
 
                 # extra_data = {k: v for k, v in group_info.items() if k not in ["UserName", "wxid", "NickName", "nickname", "HeadImgUrl", "avatar"]}
@@ -193,10 +240,11 @@ class WxBaseInfoInit(PluginBase):
                     INSERT INTO contacts (wxid, nickname, remark, avatar, alias, type, region, last_updated, extra_data)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                     ON DUPLICATE KEY UPDATE
-                        nickname=VALUES(nickname), avatar=VALUES(avatar), type=VALUES(type),
+                        nickname=VALUES(nickname), remark=VALUES(remark), avatar=VALUES(avatar),
+                        alias=VALUES(alias), type=VALUES(type), region=VALUES(region),
                         last_updated=VALUES(last_updated), extra_data=VALUES(extra_data)
                 ''', (
-                    group_wxid, nickname, "", avatar, "", "group", "", now, json.dumps(group_info, ensure_ascii=False)
+                    group_wxid, nickname, remark, avatar, alias, "group", region, now, json.dumps(group_info, ensure_ascii=False)
                 ))
                 group_count += 1
                 # 获取群成员

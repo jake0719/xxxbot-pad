@@ -57,7 +57,16 @@ try:
         get_contact_from_db,
         get_contacts_count
     )
+    print("database.contacts_db 联系人数据库模块导入 ================ success")
+
+    from database.contacts_db_mysql import (
+        ensure_mysql_config,
+        Database
+    )
+    print("database.contacts_db_mysql 联系人数据库模块导入 ================= success")
+
     has_contacts_db = True
+
 except ImportError as e:
     has_contacts_db = False
     print(f"联系人数据库模块导入失败: {e}")
@@ -4972,6 +4981,55 @@ except:
                 "error": f"更新所有联系人信息失败: {str(e)}"
             })
 
+    # ... 在联系人相关路由附近添加以下代码 ...
+
+    @app.put("/api/contacts/{wxid}")
+    async def update_contact(
+        wxid: str,
+        data: dict = Body(...),
+        credentials: HTTPBasicCredentials = Depends(security)
+    ):
+        """更新联系人信息接口"""
+        # 验证权限
+        username = check_auth(credentials)
+        if not username:
+            raise HTTPException(status_code=401, detail="未经授权的访问")
+
+        try:
+            required_fields = ['nickname','remark', 'alias', 'region']
+            update_data = {k: v for k, v in data.items() if k in required_fields and v is not None}
+            
+            # 验证数据有效性
+            if not update_data:
+                raise HTTPException(status_code=400, detail="无有效更新数据")
+                
+            # 更新数据库
+            # 
+            from database.contacts_db import update_contact_in_db
+            update_contact_in_db(data)
+
+            # from database.contacts_db_mysql import Database, ensure_mysql_config
+            ensure_mysql_config()
+            Database.update_contact_in_mysql(data)
+            
+            # 更新内存中的联系人数据（如果存在缓存）
+            if hasattr(app.state, 'cached_contacts'):
+                for contact in app.state.cached_contacts:
+                    if contact['wxid'] == wxid:
+                        contact.update(update_data)
+                        break
+                        
+            return {"success": True, "message": "联系人信息已更新"}
+            
+        except sqlite3.Error as e:
+            logger.error(f"数据库更新失败: {str(e)}")
+            raise HTTPException(status_code=500, detail="数据库更新失败")
+        except HTTPException as he:
+            raise he
+        except Exception as e:
+            logger.error(f"更新联系人异常: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail="服务器内部错误")
+    
     # API: 刷新单个联系人信息
     @app.get("/api/contacts/{wxid}/refresh", response_class=JSONResponse)
     async def api_refresh_contact(wxid: str, request: Request):
@@ -5042,9 +5100,16 @@ except:
 
             # 处理返回结果
             contact_info = None
+
+            ensure_mysql_config()
+            dbContact = Database.get_contact_from_mysql(wxid)
+
+            logger.info(f"mysql中联系人 {wxid} 信息：{dbContact}")
+            
+            
             if isinstance(detail, list) and len(detail) > 0:
                 detail_item = detail[0]
-                logger.debug(f"联系人 {wxid} 详情项类型: {type(detail_item)}")
+                logger.info(f"联系人 {wxid} 详情项类型: {detail_item}")
 
                 # 处理昵称
                 nickname = ""
@@ -5084,12 +5149,29 @@ except:
                 elif 'alias' in detail_item:
                     alias = detail_item.get('alias')
 
+                region = ""
+                if 'Region' in detail_item:
+                    region = detail_item.get('Region')
+                elif 'region' in detail_item:
+                    region = detail_item.get('region')
+
                 # 确定联系人类型
                 contact_type = "friend"
                 if wxid.endswith("@chatroom"):
                     contact_type = "group"
                 elif wxid.startswith("gh_"):
                     contact_type = "official"
+
+                if dbContact:
+                    if dbContact.get('nickname') and nickname == wxid:
+                        nickname = dbContact.get('nickname')
+                        logger.info(f"mysql 联系人 {wxid} nickname：{nickname}")
+                    if dbContact.get('region') and (region == "" or region == "未知"):
+                        region = dbContact.get('region')
+                    if dbContact.get('alias') and (alias == "" or alias == "未设置"):
+                        alias = dbContact.get('alias')
+                    if dbContact.get('remark') and (remark == "" or remark == "未设置"):
+                        remark = dbContact.get('remark')
 
                 # 创建联系人信息对象
                 contact_info = {
@@ -5098,6 +5180,7 @@ except:
                     'avatar': avatar or '',
                     'remark': remark or '',
                     'alias': alias or '',
+                    'region': region or '',
                     'type': contact_type
                 }
 
@@ -5110,7 +5193,7 @@ except:
             elif isinstance(detail, dict):
                 # 如果是字典，直接使用
                 detail_item = detail
-                logger.debug(f"联系人 {wxid} 详情项类型: {type(detail_item)}")
+                logger.info(f"联系人 {wxid} 详情项类型: {type(detail_item)}")
 
                 # 处理昵称
                 nickname = ""
@@ -5157,6 +5240,23 @@ except:
                 elif wxid.startswith("gh_"):
                     contact_type = "official"
 
+                region = ""
+                if 'Region' in detail_item:
+                    region = detail_item.get('Region')
+                elif 'region' in detail_item:
+                    region = detail_item.get('region')
+
+                if dbContact:
+                    if dbContact.get('nickname') and nickname == wxid:
+                        nickname = dbContact.get('nickname')
+                        logger.info(f"mysql 联系人 {wxid} nickname：{nickname}")
+                    if dbContact.get('region') and (region == "" or region == "未知"):
+                        region = dbContact.get('region')
+                    if dbContact.get('alias') and (alias == "" or alias == "未设置"):
+                        alias = dbContact.get('alias')
+                    if dbContact.get('remark') and (remark == "" or remark == "未设置"):
+                        remark = dbContact.get('remark')
+
                 # 创建联系人信息对象
                 contact_info = {
                     'wxid': wxid,
@@ -5164,6 +5264,7 @@ except:
                     'avatar': avatar or '',
                     'remark': remark or '',
                     'alias': alias or '',
+                    'region': region or '',
                     'type': contact_type
                 }
 

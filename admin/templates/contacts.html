@@ -420,7 +420,7 @@
                             <button id="refresh-contact-btn" class="btn btn-sm btn-outline-primary mt-2" title="刷新联系人信息">
                                 <i class="bi bi-arrow-clockwise"></i> 刷新联系人信息
                             </button>
-                                </div>
+                        </div>
 
                         <div class="contact-details-card">
                             <div class="info-item">
@@ -431,18 +431,21 @@
                                 <span class="info-label">昵称</span>
                                 <span id="contact-nickname" class="info-value">-</span>
                         </div>
-                            <div class="info-item">
-                                <span class="info-label">备注名</span>
-                                <span id="contact-remark" class="info-value">-</span>
-                                    </div>
-                            <div class="info-item">
-                                <span class="info-label">微信号</span>
-                                <span id="contact-alias" class="info-value">-</span>
-                                    </div>
-                            <div class="info-item">
-                                <span class="info-label">地区</span>
-                                <span id="contact-region" class="info-value">-</span>
-                                </div>
+                        <div class="info-item">
+                            <span class="info-label">备注名</span>
+                            <span id="contact-remark" class="info-value">-</span>
+                            <button class="btn btn-sm btn-outline-secondary edit-btn" data-field="remark">编辑</button>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">微信号</span>
+                            <span id="contact-alias" class="info-value">-</span>
+                            <!-- <button class="btn btn-sm btn-outline-secondary edit-btn" data-field="alias">编辑</button> -->
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">地区</span>
+                            <span id="contact-region" class="info-value">-</span>
+                            <!-- <button class="btn btn-sm btn-outline-secondary edit-btn" data-field="region">编辑</button> -->
+                        </div>
                                     </div>
 
                         <!-- 群公告 -->
@@ -609,6 +612,43 @@
     <div id="reminders-list" class="list-group"></div>
     <div id="no-reminders" class="text-center py-3 d-none">
         <p class="text-muted mb-0">暂无提醒内容</p>
+    </div>
+</div>
+
+<div class="modal fade" id="edit-contact-modal" tabindex="-1" aria-labelledby="editContactModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editContactModalLabel">编辑联系人信息</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-contact-form">
+                    <input type="hidden" id="edit-wxid">
+                    <input type="hidden" id="edit-avatar">
+                    <div class="mb-3">
+                        <label for="edit-nickname" class="form-label">昵称</label>
+                        <input type="text" class="form-control" id="edit-nickname">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-remark" class="form-label">备注名</label>
+                        <input type="text" class="form-control" id="edit-remark">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-alias" class="form-label">微信号</label>
+                        <input type="text" class="form-control" id="edit-alias">
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit-region" class="form-label">地区</label>
+                        <input type="text" class="form-control" id="edit-region">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                <button type="button" class="btn btn-primary" id="save-contact-changes">保存更改</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1073,6 +1113,7 @@
                     setTimeout(() => processNextBatch(batchSize, totalBatches, totalContacts), 5000);
                     return;
                 } else {
+                // 编辑按钮点击事件
                     console.error('获取联系人详情失败:', response.error);
                     requestErrors++;
                 }
@@ -1442,6 +1483,15 @@
         if (contact.type === 'group') {
             // 显示群聊详情
             $('#group-info-section').removeClass('d-none');
+            // 更新联系人基本信息
+            $('#contact-wxid').text(contact.wxid || '未知');
+            $('#contact-nickname').text(contact.nickname || '未设置');
+
+            // 使用remark字段
+            $('#contact-remark').text(contact.remark || '未设置');
+
+            $('#contact-alias').text(contact.alias || '未设置');
+            $('#contact-region').text(contact.region || '未知');
 
             // 显示群公告加载状态
             $('#group-announcement-content').html('<div class="text-center"><i class="bi bi-arrow-repeat fa-spin"></i> 加载群公告中...</div>');
@@ -3017,6 +3067,54 @@
 
         // 加载所有提醒
         loadAllReminders();
+
+        $(document).on('click', '.edit-btn', function() {
+            const field = $(this).data('field');
+            const contact = contacts.find(c => c.wxid === currentContactId);
+            
+            $('#edit-contact-modal').modal('show');
+            $('#edit-wxid').val(currentContactId);
+            $('#edit-avatar').val(contact.avatar);
+            $('#edit-nickname').val(contact.nickname);
+            $('#edit-remark').val(contact.remark || '');
+            $('#edit-alias').val(contact.alias || '');
+            $('#edit-region').val(contact.region || '');
+        });
+
+        // 保存联系人修改
+        $('#save-contact-changes').click(function() {
+            const wxid = $('#edit-wxid').val();
+            const data = {
+                wxid: $('#edit-wxid').val().trim(),
+                avatar: $('#edit-avatar').val().trim(),
+                nickname: $('#edit-nickname').val().trim(),
+                remark: $('#edit-remark').val().trim(),
+                alias: $('#edit-alias').val().trim(),
+                region: $('#edit-region').val().trim()
+            };
+
+            $.ajax({
+                url: `/api/contacts/${wxid}`,
+                type: 'PUT',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    if(response.success) {
+                        // 更新本地数据
+                        const index = contacts.findIndex(c => c.wxid === wxid);
+                        if(index !== -1) {
+                            contacts[index] = {...contacts[index], ...data};
+                            showContactDetail(wxid); // 刷新显示
+                        }
+                        $('#edit-contact-modal').modal('hide');
+                        toastr.success('联系人信息已更新');
+                    }
+                },
+                error: function(xhr) {
+                    toastr.error('更新失败: ' + (xhr.responseJSON?.error || '服务器错误'));
+                }
+            });
+        });
     });
 
     // 编辑提醒函数

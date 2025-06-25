@@ -1,0 +1,19 @@
+[GroupChatHelper.Dify]
+enable = true              # 是否启用 Dify 集成
+api-key = "app-j6nvdTiFai2OVG5YTh5BGWhP"   # 你的 Dify API 密钥
+base-url = "http://14.103.148.132/v1"  # 你的 Dify API Base URL
+http-proxy = ""               # HTTP 代理服务器地址 (可选)，如 "http://127.0.0.1:7890" or leave blank
+
+[GroupChatHelper]
+enable = true
+commands = []
+default_num_messages = 100
+summary_wait_time = 60
+
+# 群组黑白名单
+white_group_list = [ # 群聊白名单，列表中的群组开启自动回复
+    "56873297827@chatroom",
+    "18634773093@chatroom",
+    "53726321028@chatroom",
+    "7530636315@chatroom"
+]

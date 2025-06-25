@@ -1311,7 +1311,7 @@ class XYBot:
         elif msg_type == "ClientCheckGetExtInfo":
             pass
         else:
-            logger.info("收到系统消息: {}, 完整内容: {}", message, message["Content"])
+            # logger.info("收到系统消息: {}, 完整内容: {}", message, message["Content"])
             if self.ignore_check(message["FromWxid"], message["SenderWxid"]):
                 if self.ignore_protection or not protector.check(14400):
                     await EventManager.emit("system_message", self.bot, message)

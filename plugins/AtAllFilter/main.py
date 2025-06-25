@@ -16,7 +16,7 @@ class AtAllFilter(PluginBase):
     当在群聊中收到@所有人的消息时，阻止消息传递到其他插件
     """
     description = "@所有人消息过滤器"
-    author = "xxxbot-pad"
+    author = "唐古AI客服管理"
     version = "1.0.0"
 
     def __init__(self):

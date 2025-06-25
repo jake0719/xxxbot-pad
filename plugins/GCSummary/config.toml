@@ -1,14 +1,19 @@
 [GCSummary.Dify]
 enable = true              # 是否启用 Dify 集成
-api-key = "app-0JkTBEEQN4wbECiRv27Megw6"   # 你的 Dify API 密钥
+api-key = "app-8309uecj1ymaqQJAqV9Djt1y"   # 你的 Dify API 密钥
 base-url = "http://14.103.148.132/v1"  # 你的 Dify API Base URL
 http-proxy = ""               # HTTP 代理服务器地址 (可选)，如 "http://127.0.0.1:7890" or leave blank
 
 [GCSummary]
 enable = true
-commands = ["$总结", "总结一下"]
+commands = ["$总结","定时总结", "总结一下", "定时任务"]
 default_num_messages = 100
 summary_wait_time = 60
+
+# 群组黑白名单
+white_group_list = [ # 群聊白名单，列表中的群组将定时总结
+    "56873297827@chatroom",
+]
 
 [GCSummary.MySQL]
 host = "x16.com"

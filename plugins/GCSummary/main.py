@@ -13,17 +13,20 @@ import os
 import mysql.connector
 from mysql.connector import Error
 
+
 from WechatAPI import WechatAPIClient
 from utils.decorators import on_at_message, on_text_message
 from utils.plugin_base import PluginBase
+
+from database import get_contacts_from_db
 
 class GCSummary(PluginBase):
     """
     一个用于总结个人聊天和群聊天的插件，可以直接调用Dify大模型进行总结。
     """
 
-    description = "总结聊天记录"
-    author = "AI编程猫"
+    description = "定时自动总结聊天记录"
+    author = "CHH-AI"
     version = "1.1.0"
 
     # 总结的prompt
@@ -106,7 +109,7 @@ class GCSummary(PluginBase):
                 "database": mysql_config["database"]
             }
 
-            logger.info("GCSummary 插件配置加载成功")
+            logger.info("GCSummary  =============================  插件配置加载成功")
         except FileNotFoundError:
             logger.error("config.toml 配置文件未找到，插件已禁用。")
             self.enable = False
@@ -174,6 +177,13 @@ class GCSummary(PluginBase):
                     VALUES (%s, CURDATE(), %s)
                 """
                 cursor.execute(insert_query, (group_id, summary))
+
+                update_query = """
+                    update group_chat_summaries gs left join contacts ct on gs.group_id=ct.wxid
+                    set gs.nickname = ct.nickname   
+                    where gs.nickname is null and gs.group_id = %s
+                """
+                cursor.execute(update_query, (group_id,))
                 self.mysql_db_connection.commit()
                 logger.info(f"群 {group_id} 的总结已存入 MySQL 数据库")
             else:
@@ -185,6 +195,14 @@ class GCSummary(PluginBase):
                         VALUES (%s, CURDATE(), %s)
                     """
                     cursor.execute(insert_query, (group_id, summary))
+
+                    update_query = """
+                        update group_chat_summaries gs left join contacts ct on gs.group_id=ct.wxid
+                        set gs.nickname = ct.nickname   
+                        where gs.nickname is null and gs.group_id = %s
+                    """
+                    cursor.execute(update_query,  (group_id,))
+                
                     self.mysql_db_connection.commit()
                     logger.info(f"群 {group_id} 的总结已存入 MySQL 数据库")
                 except Error as e:
@@ -399,6 +417,9 @@ class GCSummary(PluginBase):
         # 3. 记录聊天历史 (可选，如果你还需要在内存中保留一份)
         # self.chat_history[chat_id].append(message)
 
+        if not "schedule_daily_summary" in self.summary_tasks:
+            self.summary_tasks["schedule_daily_summary"] = asyncio.create_task(self.schedule_daily_summary(bot))
+
         # 4. 检查是否为总结命令
         if any(cmd in content for cmd in self.commands):
             # 4.1 提取时间范围
@@ -407,8 +428,13 @@ class GCSummary(PluginBase):
             limit = None
             if not duration: #如果没有时间范围，就提取消息数量
                 limit = self._extract_num_messages(content)
+                # return True # 允许其他插件处理
 
-
+            if "定时总结" in content:
+                self.summary_tasks[chat_id] = asyncio.create_task(
+                self.auto_summarize_chat(bot, chat_id, limit=limit, duration=duration))
+                return True # 允许其他插件处理
+            
             # 4.3 检查是否正在进行总结
             if chat_id in self.summary_tasks:
                 try:
@@ -420,6 +446,7 @@ class GCSummary(PluginBase):
                 except Exception as e:
                     logger.exception(f"发送消息失败: {e}")
                     return True # 允许其他插件处理，因为发送消息失败了
+ 
 
             # 4.4 创建总结任务
             self.summary_tasks[chat_id] = asyncio.create_task(
@@ -544,3 +571,145 @@ class GCSummary(PluginBase):
     async def start(self):
         """启动插件时启动清理旧消息的任务"""
         asyncio.create_task(self.clear_old_messages()) #启动定时清理任务
+        # asyncio.create_task(self.schedule_daily_summary())  # 启动每日定时总结任务
+
+    async def schedule_daily_summary(self, bot: WechatAPIClient):
+        """安排每日 12 点和 18 点的总结任务"""
+        # bot = WechatAPIClient()  # 假设这里可以正确初始化 WechatAPIClient
+
+        logger.info("schedule_daily_summary --------------------------------- 定时总结任务启动")
+        while True:
+            now = datetime.now()
+            # 计算到 12 点和 18 点的时间差
+            next_12 = now.replace(hour=12, minute=0, second=0, microsecond=0)
+            next_18 = now.replace(hour=18, minute=0, second=0, microsecond=0)
+
+            if now >= next_12:
+                if now >= next_18:
+                    next_12 += timedelta(days=1)
+                    next_18 += timedelta(days=1)
+                else:
+                    next_12 += timedelta(days=1)
+
+            # 等待到最近的触发时间
+            next_trigger = min(next_12, next_18)
+            wait_seconds = (next_trigger - now).total_seconds()
+            await asyncio.sleep(wait_seconds)
+
+            # 获取所有群聊 ID，这里需要根据实际情况实现
+            group_chat_ids = self.get_all_group_chat_ids()  # 假设存在该方法
+
+            if datetime.now().hour == 12:
+                # 12 点触发，总结当天 0 点到 12 点的记录
+                duration = timedelta(hours=12)
+            else:
+                # 18 点触发，总结当天 12 点到 18 点的记录
+                duration = timedelta(hours=6)
+
+            logger.info(f"目前任务列表 ：{self.summary_tasks} ")
+
+            for chat_id in group_chat_ids:
+                logger.info(f"开始新建总结任务 ：总结{chat_id} 的群聊消息")
+                self.summary_tasks[chat_id] = asyncio.create_task(self.auto_summarize_chat(bot, chat_id, duration=duration))
+
+    def get_all_group_chat_ids(self):
+        """获取所有群聊 ID，需要根据实际情况实现"""
+
+        contacts = get_contacts_from_db()
+
+        cached_contacts = []
+
+        for contact in contacts:
+            wxid = contact.get("wxid", "")
+            if wxid.endswith("@chatroom"):
+                cached_contacts.append(wxid)
+        logger.info(f"从数据库加载了 {len(cached_contacts)} 个群聊wxid")
+        logger.info(f"从数据库加载了以下群聊wxid： {cached_contacts}")
+
+        # 这里只是示例，需要根据实际情况实现从数据库或其他地方获取群聊 ID 的逻辑
+        return cached_contacts
+    
+    async def auto_summarize_chat(self, bot: WechatAPIClient, chat_id: str, limit: Optional[int] = None, duration: Optional[timedelta] = None) -> None:
+        """
+        总结聊天记录并发送结果。
+
+        Args:
+            bot: WechatAPIClient 实例.
+            chat_id: 聊天ID (群ID或个人ID).
+            limit: 总结的消息数量 (可选).
+            duration: 总结的时间段 (可选).
+        """
+        try:
+            if limit:
+                logger.info(f"开始定时总结 {chat_id} 的最近 {limit} 条消息")
+            elif duration:
+                logger.info(f"开始定时总结 {chat_id} 的最近 {duration} 时间段的消息")
+            else:
+                logger.error("limit 和 duration 都为空！")
+                return # 理论上不应该发生
+
+            # 从数据库中获取聊天记录
+            messages_to_summarize = self.get_messages_from_db(chat_id, limit, duration)
+
+            if not messages_to_summarize:
+                try:
+                    # await bot.send_text_message(chat_id, "没有足够的聊天记录可以总结。")
+                    logger.info(f"{chat_id} 没有足够的聊天记录可以总结。") 
+                    self.save_summary_to_mysql(chat_id, f"{chat_id} 没有足够的聊天记录可以总结。")
+                    return
+                except AttributeError as e:
+                    logger.error(f"发送消息失败 (没有 send_text_message 方法): {e}")
+                    return
+                except Exception as e:
+                    logger.exception(f"发送消息失败: {e}")
+                    return
+
+            # 获取所有发言者的 wxid
+            wxids = set(msg['sender_wxid'] for msg in messages_to_summarize) # 注意这里键名改成小写了
+            nicknames = {}
+            for wxid in wxids:
+                try:
+                    nickname = await bot.get_nickname(wxid)
+                    nicknames[wxid] = nickname
+                except Exception as e:
+                    logger.exception(f"获取用户 {wxid} 昵称失败: ")
+                    nicknames[wxid] = wxid  # 获取昵称失败，使用 wxid 代替
+
+            # 提取消息内容，并替换成昵称
+            text_to_summarize = "\n".join(
+                [f"{nicknames.get(msg['sender_wxid'], msg['sender_wxid'])} ({datetime.fromtimestamp(msg['create_time']).strftime('%H:%M:%S')}): {msg['content']}" # 注意键名改成小写了
+                 for msg in messages_to_summarize]
+            )
+
+            # 调用 Dify API 进行总结
+            summary = await self._get_summary_from_dify(chat_id, text_to_summarize)
+
+            # try:
+            #     await bot.send_text_message(chat_id, f"-----聊天总结-----\n{summary}")
+            # except AttributeError as e:
+            #     logger.error(f"发送消息失败 (没有 send_text_message 方法): {e}")
+            #     return
+            # except Exception as e:
+            #     logger.exception(f"发送消息失败: {e}")
+            #     return
+
+            self.last_summary_time[chat_id] = datetime.now()  # 更新上次总结时间
+            logger.info(f"{chat_id} 的总结完成")
+
+            # 将总结存入 MySQL 数据库
+            self.save_summary_to_mysql(chat_id, summary)
+
+        except Exception as e:
+            logger.exception(f"总结 {chat_id} 发生错误: {e}")
+            self.save_summary_to_mysql(chat_id, f"总结 {chat_id} 发生错误: {e}")
+            # try:
+            #     # await bot.send_text_message(chat_id, f"总结时发生错误: {e}")
+            # except AttributeError as e:
+            #     logger.error(f"发送消息失败 (没有 send_text_message 方法): {e}")
+            #     return
+            # except Exception as e:
+            #     logger.exception(f"发送消息失败: {e}")
+            #     return
+        finally:
+            if chat_id in self.summary_tasks:
+                del self.summary_tasks[chat_id]  # 移除
