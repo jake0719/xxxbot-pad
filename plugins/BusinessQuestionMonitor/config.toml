@@ -1,0 +1,8 @@
+[BusinessQuestionMonitor]
+enable = true
+admin_wxids = ["chenhuihuan", "wxid_s4m6sfy7dhne22"]  # 管理员微信号列表
+check_interval = 300  # 检查间隔秒数，默认5分钟
+business_keywords = ["报错", "无法登录", "订单", "电子称","入库出库", "库存", "物流","系统配置", "模板设置", "专属模板", "标签", "处方", "分贴", "合并", "打印", "异常", "联系人"]
+use_ai_classification = true  # 是否用AI判断业务类型
+ai_api_key = "app-8309uecj1ymaqQJAqV9Djt1y"  # AI分类API密钥（如用Dify等）
+ai_base_url = "http://14.103.148.132/v1"  # AI分类API Base URL 

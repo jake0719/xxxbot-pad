@@ -73,15 +73,15 @@ try:
             with open(root_status_file, "w", encoding="utf-8") as f:
                 json.dump(current_status, f)
 
-            logger.debug(f"成功更新bot状态: {status}, 路径: {status_file} 和 {root_status_file}")
+            logger.info(f"成功更新bot状态: {status}, 路径: {status_file} 和 {root_status_file}")
 
             # 输出更多调试信息
             if "nickname" in current_status:
-                logger.debug(f"状态文件包含昵称: {current_status['nickname']}")
+                logger.info(f"状态文件包含昵称: {current_status['nickname']}")
             if "wxid" in current_status:
-                logger.debug(f"状态文件包含微信ID: {current_status['wxid']}")
+                logger.info(f"状态文件包含微信ID: {current_status['wxid']}")
             if "alias" in current_status:
-                logger.debug(f"状态文件包含微信号: {current_status['alias']}")
+                logger.info(f"状态文件包含微信号: {current_status['alias']}")
 
         except Exception as e:
             logger.error(f"更新bot状态失败: {e}")
@@ -134,8 +134,8 @@ async def bot_core():
     api_host = api_config.get("host", "127.0.0.1")  # 获取自定义的API主机地址
     redis_host = api_config.get("redis-host", "127.0.0.1")
     redis_port = api_config.get("redis-port", 6379)
-    logger.debug("WechatAPI 服务器地址: {}", api_host)
-    logger.debug("Redis 主机地址: {}:{}", redis_host, redis_port)
+    logger.info("WechatAPI 服务器地址: {}", api_host)
+    logger.info("Redis 主机地址: {}:{}", redis_host, redis_port)
     # server.start(port=api_config.get("port", 9000),
     #              mode=api_config.get("mode", "release"),
     #              redis_host=redis_host,
@@ -166,7 +166,7 @@ async def bot_core():
                 from WechatAPI.Client2 import WechatAPIClient as WechatAPIClient2
 
                 # 使用Client2
-                bot = WechatAPIClient2(api_host, api_config.get("port", 9000))
+                bot = WechatAPIClient2(api_host, api_config.get("port", 9011))
                 logger.success("成功加载855协议客户端")
             else:
                 logger.warning("WechatAPI Client2目录不存在，回退使用默认客户端")
@@ -193,15 +193,15 @@ async def bot_core():
                 from WechatAPI.Client3 import WechatAPIClient as WechatAPIClient3
 
                 # 使用Client3
-                bot = WechatAPIClient3(api_host, api_config.get("port", 9000))
+                bot = WechatAPIClient3(api_host, api_config.get("port", 9011))
                 logger.success(f"成功加载{protocol_version}协议客户端")
             else:
                 logger.warning("WechatAPI Client3目录不存在，回退使用默认客户端")
-                bot = WechatAPI.WechatAPIClient(api_host, api_config.get("port", 9000))
+                bot = WechatAPI.WechatAPIClient(api_host, api_config.get("port", 9011))
         except Exception as e:
             logger.error(f"加载{protocol_version}协议客户端失败: {e}")
             logger.warning("回退使用默认客户端")
-            bot = WechatAPI.WechatAPIClient(api_host, api_config.get("port", 9000))
+            bot = WechatAPI.WechatAPIClient(api_host, api_config.get("port", 9011))
     else:
         # 849版本使用默认Client
         bot = WechatAPI.WechatAPIClient(api_host, api_config.get("port", 9000))
@@ -283,7 +283,7 @@ async def bot_core():
                                     api_base = "/api"
                                 else:
                                     api_base = "/VXAPI"
-                                api_url = f'http://{api_host}:{api_config.get("port", 9000)}{api_base}/Login/Awaken'
+                                api_url = f'http://{api_host}:{api_config.get("port", 9011)}{api_base}/Login/Awaken'
 
                                 # 准备请求参数
                                 json_param = {

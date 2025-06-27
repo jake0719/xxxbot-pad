@@ -66,6 +66,8 @@ RUN mkdir -p /app/logs && chmod 777 /app/logs
 COPY entrypoint.sh .
 RUN chmod +x entrypoint.sh
 
+WORKDIR $WORKDIR
+
 # 暴露端口
 EXPOSE 9090 3000
 

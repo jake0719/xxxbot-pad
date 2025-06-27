@@ -383,7 +383,7 @@ class ChatSummary(PluginBase):
                 VALUES (?, ?, ?)
             """, (sender_wxid, create_time, content))
             self.db_connection.commit()
-            logger.debug(f"消息保存到表 {table_name}: sender_wxid={sender_wxid}, create_time={create_time}")
+            logger.info(f"消息保存到表 {table_name}: sender_wxid={sender_wxid}, create_time={create_time}")
         except sqlite3.Error as e:
             logger.exception(f"保存消息到表 {table_name} 失败: {e}")
 
